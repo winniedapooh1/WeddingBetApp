@@ -8,14 +8,23 @@ runConfig:
   # memoryMiB: 512
 
 # Environment variables and secrets.
-# env:
+env: # <-- UNCOMMENT THIS LINE (remove the #)
   # Configure environment variables.
   # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  # - variable: MESSAGE
-  #   value: Hello world!
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY # <-- UNCOMMENT AND ADD YOUR VARIABLES
+    value: "AIzaSyA7IQp6j4aeVC_GvRcRGFv2E1P93ylslVI"
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "weddingbets-35d91.firebaseapp.com"
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "weddingbets-35d91"
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "weddingbets-35d91.firebasestorage.app"
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "149755833658"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:149755833658:web:80f6763a1a13ffe45a7403"
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: "G-9WKC6M5SXC"
 
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
