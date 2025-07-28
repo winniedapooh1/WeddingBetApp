@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react"; // Added useEffect
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Added useRouter
-import { useAuth } from "../context/page"; // Added useAuth
+import { useAuth } from "../context/AuthContext"; // Added useAuth
 import Navbar from '../components/navBar'; // Ensure this path is correct: '../components/Navbar' if your file is Navbar.tsx
 
 // Mock data - This will be replaced with Firestore data later

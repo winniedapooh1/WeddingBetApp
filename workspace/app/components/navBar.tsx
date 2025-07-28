@@ -2,7 +2,7 @@
 "use client"; // This is a Client Component
 
 import Link from 'next/link';
-import { useAuth } from '../context/page'; // Adjust path
+import { useAuth } from '../context/AuthContext'; // Adjust path
 import { auth } from '../lib/firebase'; // Adjust path
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
