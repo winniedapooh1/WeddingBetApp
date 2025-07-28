@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Navbar from '../components/navBar';
 
 const mockBets = [
     {
@@ -31,40 +32,9 @@ export default function BetsPage() {
     return (
         <div className="bg-rose-50 min-h-screen flex flex-col">
             {/* Navbar */}
-            <nav className="bg-white shadow-md border-b border-rose-100">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <Link href="/" className="text-rose-500 text-3xl font-extrabold tracking-wide">
-                        Wedding Wagers
-                    </Link>
-                    <ul className="flex space-x-6">
-                        <li>
-                            <Link
-                                href="/"
-                                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            >
-                                Home
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                href="/bets"
-                                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            >
-                                Bets
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                href="/about"
-                                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            >
-                                About
-                            </Link>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+            <Navbar />
 
+            
             {/* Main Content */}
             <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">

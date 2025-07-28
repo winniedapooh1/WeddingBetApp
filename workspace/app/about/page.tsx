@@ -1,43 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import Navbar from '../components/navBar';
 
 export default function AboutPage() {
   return (
     <main className="bg-rose-50 min-h-screen">
       {/* Navbar */}
-      <nav className="bg-white shadow-md border-b border-rose-100 mb-12">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="text-rose-500 text-3xl font-extrabold tracking-wide">
-            Wedding Wagers
-          </Link>
-          <ul className="flex space-x-6">
-            <li>
-              <Link
-                href="/"
-                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/bets"
-                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-              >
-                Bets
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/about"
-                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-              >
-                About
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <div className="max-w-3xl mx-auto text-center">

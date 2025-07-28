@@ -1,42 +1,13 @@
 import Link from "next/link";
+import Navbar from '../app/components/navBar';
 
 export default function Home() {
   return (
     <div className="font-sans min-h-screen flex flex-col bg-rose-50">
       {/* Navbar */}
-      <nav className="bg-white shadow-md border-b border-rose-100">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="text-rose-500 text-3xl font-extrabold tracking-wide">
-            Wedding Wagers
-          </Link>
-          <ul className="flex space-x-6">
-            <li>
-              <Link
-                href="/"
-                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/bets"
-                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-              >
-                Bets
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/about"
-                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-              >
-                About
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </nav>
+      <Navbar />
+
+      {/* Hero Section */}
 
       {/* Main Content */}
       <main className="flex-grow flex flex-col items-center justify-center text-center px-6 py-16 bg-rose-50 text-gray-800">
