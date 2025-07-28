@@ -1,8 +1,13 @@
-"use client";
+// app/bets/page.tsx
+"use client"; // This is a Client Component
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Added useRouter
+import { useAuth } from "../context/AuthContext"; // Added useAuth
+import Navbar from '../components/navBar'; // Ensure this path is correct: '../components/Navbar' if your file is Navbar.tsx
 
+// Mock data - This will be replaced with Firestore data later
 const mockBets = [
     {
         id: 1,
@@ -22,55 +27,57 @@ const mockBets = [
 ];
 
 export default function BetsPage() {
+    // State for managing user's bet selections
     const [selections, setSelections] = useState<{ [key: number]: string }>({});
 
+    // Get authentication state from AuthContext
+    const { currentUser, loading } = useAuth();
+    // Get router for redirection
+    const router = useRouter();
+
+    // Effect hook to handle authentication-based redirection
+    useEffect(() => {
+        // If authentication state is no longer loading AND there is no current user,
+        // it means the user is not logged in. Redirect them to the login page.
+        if (!loading && !currentUser) {
+            router.push('/login');
+        }
+    }, [currentUser, loading, router]); // Dependencies: re-run when these values change
+
+    // Function to handle selection of a bet option
     const handleSelect = (betId: number, option: string) => {
         setSelections((prev) => ({ ...prev, [betId]: option }));
     };
 
+    // --- Conditional Rendering for Authentication State ---
+    // If authentication state is still loading, or if there's no current user (and loading is done),
+    // display a loading/redirecting message. This prevents flickering and ensures the page
+    // doesn't render sensitive content before authentication is confirmed.
+    if (loading || (!currentUser && !loading)) {
+        return (
+            <div className="font-sans min-h-screen flex items-center justify-center bg-rose-50 text-gray-700">
+                {loading ? 'Loading bets...' : 'Redirecting to login...'}
+            </div>
+        );
+    }
+
+    // --- Main Page Content (Rendered only if user is authenticated) ---
     return (
         <div className="bg-rose-50 min-h-screen flex flex-col">
-            {/* Navbar */}
-            <nav className="bg-white shadow-md border-b border-rose-100">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <Link href="/" className="text-rose-500 text-3xl font-extrabold tracking-wide">
-                        Wedding Wagers
-                    </Link>
-                    <ul className="flex space-x-6">
-                        <li>
-                            <Link
-                                href="/"
-                                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            >
-                                Home
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                href="/bets"
-                                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            >
-                                Bets
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                href="/about"
-                                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
-                            >
-                                About
-                            </Link>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+            {/* Navbar component, which will show Login/Logout based on auth state */}
+            <Navbar />
 
-            {/* Main Content */}
+            {/* Main content area for displaying bets */}
             <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-4xl font-extrabold text-rose-500 text-center mb-10">
                         Place Your Bets 💍
                     </h1>
+                    {currentUser && ( // Display welcome message if user is logged in
+                        <p className="text-xl md:text-2xl mb-8 max-w-2xl text-gray-700 text-center">
+                            Welcome, {currentUser.email}!
+                        </p>
+                    )}
 
                     <div className="grid gap-8">
                         {mockBets.map((bet) => (
@@ -107,6 +114,7 @@ export default function BetsPage() {
                         ))}
                     </div>
                     <button
+                        // IMPORTANT: Replace alert() with a custom modal/message box for production
                         onClick={() => alert("Your bets have been submitted! 🎉")}
                         className="mt-8 bg-purple-300 hover:bg-purple-400 text-white font-semibold py-3 px-8 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
                     >
@@ -116,4 +124,4 @@ export default function BetsPage() {
             </main>
         </div>
     );
-} 
+}
