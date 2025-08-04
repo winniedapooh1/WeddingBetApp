@@ -55,6 +55,19 @@ export default function Navbar() {
             </li>
           )}
           <li>
+            </li>
+          {/* Conditionally render the Admin link */}
+          {!loading && isAdmin && (
+            <li>
+              <Link
+                href="/adminAnswerKey"
+                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
+              >
+                Answer Key
+              </Link>
+            </li>
+          )}
+          <li>
             <Link
               href="/about"
               className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
