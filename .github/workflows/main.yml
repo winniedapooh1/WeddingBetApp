@@ -24,9 +24,11 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: workspace # Corrected working directory based on your project structure
 
       - name: Run tests
         run: npm run test
+        working-directory: workspace # Corrected working directory based on your project structure
 
   deploy:
     name: Deploy to Firebase
@@ -44,9 +46,11 @@ jobs:
           node-version: '22' 
       - name: Install dependencies
         run: npm install
+        working-directory: workspace # Corrected working directory based on your project structure
 
       - name: Build project
         run: npm run build # Or your specific build command
+        working-directory: workspace # Corrected working directory based on your project structure
 
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0 # Use the official Firebase Hosting GitHub Action
