@@ -56,6 +56,10 @@ export default function AdminAnswerKeyPage() {
     }
   }, [currentUser, loading, router]);
 
+  const handleSelect = (betId: string, option: string) => {
+    setCorrectAnswers((prev) => ({ ...prev, [betId]: option }));
+  };
+
   const handleTextChange = (betId: string, value: string) => {
     setCorrectAnswers((prev) => ({ ...prev, [betId]: value }));
   };
@@ -80,8 +84,8 @@ export default function AdminAnswerKeyPage() {
         answers: correctAnswers, // Store the entire object of correct answers
       };
 
-      // Save the single document to the 'answerKeys' collection
-      await addDoc(collection(db, 'answerKeys'), answerKeyData);
+      // Save the single document to the 'keys' collection
+      await addDoc(collection(db, 'keys'), answerKeyData);
       
       setModalMessage("The answer key has been submitted successfully! ✅");
       setCorrectAnswers({}); // Clear selections after submission
@@ -119,16 +123,42 @@ export default function AdminAnswerKeyPage() {
                   <h2 className="text-2xl font-semibold text-gray-800 mb-4">
                     {bet.question}
                   </h2>
-                  {/* For simplicity, we'll use a single text input for all answer types for the admin view */}
-                  <div>
-                    <input
-                      type="text"
-                      value={correctAnswers[bet.id] || ""}
-                      onChange={(e) => handleTextChange(bet.id, e.target.value)}
-                      className="w-full px-4 py-2 rounded-full border border-gray-300 text-gray-700 focus:border-rose-400 focus:ring-rose-400"
-                      placeholder="Enter the correct answer here..."
-                    />
-                  </div>
+                  {bet.type === "multiple-choice" && (
+                    <div className="grid gap-3">
+                      {bet.options.map((option: string) => (
+                        <label key={option}>
+                          <input
+                            type="radio"
+                            name={`bet-${bet.id}`}
+                            value={option}
+                            className="hidden"
+                            checked={correctAnswers[bet.id] === option}
+                            onChange={() => handleSelect(bet.id, option)}
+                          />
+                          <div
+                            className={`cursor-pointer px-4 py-2 rounded-full border transition duration-200 ${
+                              correctAnswers[bet.id] === option
+                                ? "bg-rose-400 text-white border-rose-400"
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-rose-100"
+                            }`}
+                          >
+                            {option}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {bet.type === "open-ended" && (
+                    <div>
+                      <input
+                        type="text"
+                        value={correctAnswers[bet.id] || ""}
+                        onChange={(e) => handleTextChange(bet.id, e.target.value)}
+                        className="w-full px-4 py-2 rounded-full border border-gray-300 text-gray-700 focus:border-rose-400 focus:ring-rose-400"
+                        placeholder="Enter the correct answer here..."
+                      />
+                    </div>
+                  )}
                 </div>
               ))
             ) : (
