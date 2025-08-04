@@ -95,6 +95,7 @@ export default function BetsPage() {
       const userBetData = Object.entries(selections).map(([betId, userAnswer]) => {
         const bet = bets.find(b => b.id === betId);
         return {
+          userName: userName || currentUser.email, // Include the user's name
           userId: currentUser.uid,
           betId,
           betQuestion: bet?.question || 'Unknown Question',
@@ -103,9 +104,9 @@ export default function BetsPage() {
         };
       });
 
-      // Save each bet to the 'userBets' collection
+      // Save each bet to the 'answers' collection
       for (const bet of userBetData) {
-        await addDoc(collection(db, 'userBets'), bet);
+        await addDoc(collection(db, 'answers'), bet);
       }
       
       setModalMessage("Your bets have been submitted! 🎉");
