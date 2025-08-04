@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If a user is logged in, check if they are an admin
       if (user) {
         setIsAdminLoading(true); // Start loading the admin check
-        const adminDocRef = doc(db, 'admins', user.uid);
+        const adminDocRef = doc(db, 'admin', user.uid);
         getDoc(adminDocRef).then((docSnap) => {
           // Check if the document exists in the 'admins' collection
           if (docSnap.exists()) {
