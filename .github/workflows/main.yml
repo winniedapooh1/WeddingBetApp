@@ -3,10 +3,11 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main 
+      - main # Or your deployment branch, e.g., 'master'
   pull_request:
     branches:
-      - main 
+      - main # Or your main development branch
+
 jobs:
   test:
     name: Run Tests
@@ -19,13 +20,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22' # Use a Node.js version compatible with your project
+          node-version: '22' # Updated to match your project's Node.js version
 
       - name: Install dependencies
         run: npm install
+        working-directory: WeddingBetApp # Added working directory
 
       - name: Run tests
         run: npm run test
+        working-directory: WeddingBetApp # Added working directory
 
   deploy:
     name: Deploy to Firebase
@@ -41,17 +44,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22' 
-
       - name: Install dependencies
         run: npm install
+        working-directory: WeddingBetApp # Added working directory
 
       - name: Build project
-        run: npm run build
+        run: npm run build # Or your specific build command
+        working-directory: WeddingBetApp # Added working directory
 
       - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v0 
+        uses: FirebaseExtended/action-hosting-deploy@v0 # Use the official Firebase Hosting GitHub Action
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}' # GitHub's automatically provided token
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_WEDDINGBETS }}' # Your Firebase service account secret
           projectId: weddingbets-35d91 # Your Firebase Project ID
           channelId: live # Deploy to the 'live' channel (your main site)
+          # You can add other options here if needed, e.g., target, entryPoint
