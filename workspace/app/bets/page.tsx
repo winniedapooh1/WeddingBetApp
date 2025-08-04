@@ -91,23 +91,16 @@ export default function BetsPage() {
     }
 
     try {
-      // Create an array of user bet objects
-      const userBetData = Object.entries(selections).map(([betId, userAnswer]) => {
-        const bet = bets.find(b => b.id === betId);
-        return {
-          userName: userName || currentUser.email, // Include the user's name
-          userId: currentUser.uid,
-          betId,
-          betQuestion: bet?.question || 'Unknown Question',
-          userAnswer,
-          submittedAt: new Date(),
-        };
-      });
+      // Create a single document object for all of the user's answers
+      const submissionData = {
+        userName: userName || currentUser.email, // Include the user's name
+        userId: currentUser.uid,
+        submittedAt: new Date(),
+        answers: selections, // Store the entire selections object
+      };
 
-      // Save each bet to the 'answers' collection
-      for (const bet of userBetData) {
-        await addDoc(collection(db, 'answers'), bet);
-      }
+      // Save the single document to the 'answers' collection
+      await addDoc(collection(db, 'answers'), submissionData);
       
       setModalMessage("Your bets have been submitted! 🎉");
       setSelections({}); // Clear selections after submission
