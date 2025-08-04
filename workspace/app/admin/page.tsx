@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import Navbar from '../components/navBar';
 import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc } from "firebase/firestore";
-// import { BeatLoader } from 'react-spinners'; // Removed to avoid missing module error
 
 // Initialize Firestore. This call will automatically use the default app instance
 // that is initialized in your `../lib/firebase` file.
@@ -43,6 +42,7 @@ export default function AdminPage() {
 
   // State for new bet form
   const [newBetQuestion, setNewBetQuestion] = useState("");
+  const [newBetType, setNewBetType] = useState<"multiple-choice" | "open-ended">("multiple-choice"); // New state for bet type
   const [newBetOptions, setNewBetOptions] = useState<string[]>([""]);
 
   // State for bets fetched from Firestore
@@ -52,7 +52,7 @@ export default function AdminPage() {
   const [modalMessage, setModalMessage] = useState("");
   const [betToDelete, setBetToDelete] = useState<string | null>(null);
 
-  // Effect to handle access control
+  // Effect to handle access control and data fetching
   useEffect(() => {
     // Redirect if not an admin after loading is complete
     if (!isAdminLoading && !isAdmin) {
@@ -88,19 +88,25 @@ export default function AdminPage() {
   // Handle form submission to create a new bet
   const handleCreateBet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newBetQuestion || newBetOptions.some(option => option === "")) {
+    
+    // Validate fields based on bet type
+    if (!newBetQuestion || (newBetType === "multiple-choice" && newBetOptions.some(option => option.trim() === ""))) {
       setModalMessage("Please fill out all fields.");
       return;
     }
     
     try {
-      await addDoc(collection(db, 'bets'), {
+      const betData = {
         question: newBetQuestion,
-        options: newBetOptions.filter(option => option !== ""),
+        type: newBetType,
+        options: newBetType === "multiple-choice" ? newBetOptions.filter(option => option.trim() !== "") : [],
         createdAt: new Date(),
-      });
+      };
+
+      await addDoc(collection(db, 'bets'), betData);
       setModalMessage("Bet created successfully!");
       setNewBetQuestion("");
+      setNewBetType("multiple-choice");
       setNewBetOptions([""]);
     } catch (error) {
       console.error("Error adding document: ", error);
@@ -164,35 +170,52 @@ export default function AdminPage() {
                   id="question"
                   value={newBetQuestion}
                   onChange={(e) => setNewBetQuestion(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 sm:text-sm p-2"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 sm:text-sm p-2 text-gray-900"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Options
+                <label htmlFor="betType" className="block text-sm font-medium text-gray-700 mb-1">
+                  Question Type
                 </label>
-                {newBetOptions.map((option, index) => (
-                  <div key={index} className="flex items-center mt-2">
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => handleOptionChange(index, e.target.value)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 sm:text-sm p-2"
-                      placeholder={`Option ${index + 1}`}
-                      required
-                    />
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleAddOption}
-                  className="mt-3 text-sm text-purple-600 hover:text-purple-800"
+                <select
+                  id="betType"
+                  value={newBetType}
+                  onChange={(e) => setNewBetType(e.target.value as "multiple-choice" | "open-ended")}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 sm:text-sm p-2 text-gray-900"
                 >
-                  + Add another option
-                </button>
+                  <option value="multiple-choice">Multiple Choice</option>
+                  <option value="open-ended">Open Ended</option>
+                </select>
               </div>
+
+              {newBetType === "multiple-choice" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Options
+                  </label>
+                  {newBetOptions.map((option, index) => (
+                    <div key={index} className="flex items-center mt-2">
+                      <input
+                        type="text"
+                        value={option}
+                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-rose-400 focus:ring-rose-400 sm:text-sm p-2 text-gray-900"
+                        placeholder={`Option ${index + 1}`}
+                        required
+                      />
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleAddOption}
+                    className="mt-3 text-sm text-purple-600 hover:text-purple-800"
+                  >
+                    + Add another option
+                  </button>
+                </div>
+              )}
 
               <button
                 type="submit"
@@ -211,21 +234,27 @@ export default function AdminPage() {
                 bets.map((bet) => (
                   <div
                     key={bet.id}
-                    className="bg-white shadow-md rounded-xl p-6 border border-rose-100 flex justify-between items-center"
+                    className="bg-white shadow-md rounded-xl p-6 border border-rose-100 flex justify-between items-start"
                   >
                     <div>
                       <h3 className="text-xl font-semibold text-gray-800">{bet.question}</h3>
-                      <ul className="mt-2 list-disc list-inside text-gray-600">
-                        {bet.options.map((option: string, index: number) => (
-                          <li key={index}>{option}</li>
-                        ))}
-                      </ul>
+                      <p className="text-sm text-gray-500 mb-2">Type: {bet.type === "multiple-choice" ? "Multiple Choice" : "Open Ended"}</p>
+                      {bet.options.length > 0 && (
+                        <ul className="mt-2 list-disc list-inside text-gray-600">
+                          {bet.options.map((option: string, index: number) => (
+                            <li key={index}>{option}</li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                     <button
                       onClick={() => handleDeleteBet(bet.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-full transition duration-300"
+                      className="text-gray-400 hover:text-red-500 transition duration-300 ml-4 p-1 rounded-full hover:bg-red-100"
+                      aria-label="Delete bet"
                     >
-                      Delete
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                 ))

@@ -1,18 +1,16 @@
-// app/login/page.tsx
 "use client"; // This is a Client Component
 
-import React, { useState } from 'react'; // <-- ADDED 'React' import here
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase'; // <-- VERIFY THIS PATH (see explanation below)
-// If you want more specific error handling, you can import FirebaseError:
-// import { FirebaseError } from 'firebase/app'; // Or firebase/auth, firebase/firestore depending on version
+import { auth, db } from '../lib/firebase';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState(''); // New state for user's name
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,24 +31,16 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Store user information in Firestore
+        // Store user information in Firestore, now including the name
         await setDoc(doc(db, 'users', user.uid), {
+          name: name, // Save the user's name
           email: user.email,
           createdAt: new Date(),
-          // You can add more fields here, like displayName, etc.
         });
         console.log('User signed up and info stored in Firestore!', user);
       }
       router.push('/'); // Redirect to homepage after successful auth
-    } catch (err: any) { // Keep 'any' for simplicity or import FirebaseError for better typing
-      // You could check for specific Firebase error codes here:
-      // if (err instanceof FirebaseError) {
-      //   console.error('Firebase Auth Error:', err.code, err.message);
-      //   setError(err.message); // Or map specific codes to user-friendly messages
-      // } else {
-      //   console.error('Generic Error:', err);
-      //   setError('An unexpected error occurred.');
-      // }
+    } catch (err: any) {
       console.error('Authentication error:', err.message);
       setError(err.message);
     } finally {
@@ -70,6 +60,22 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleAuth}>
+          {!isLoginMode && (
+            <div className="mb-4">
+              <label htmlFor="name" className="block text-gray-700 text-sm font-semibold mb-2">
+                Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-rose-300"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+          )}
           <div className="mb-4">
             <label htmlFor="email" className="block text-gray-700 text-sm font-semibold mb-2">
               Email

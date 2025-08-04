@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import Navbar from '../components/navBar';
-import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, addDoc, doc } from "firebase/firestore";
+import { use } from "react";
 
-// Initialize Firestore. This call will automatically use the default app instance
-// that is initialized in your `../lib/firebase` file.
+// Initialize Firestore
 const db = getFirestore();
 
 // A simple Modal component to replace alert() and confirm()
@@ -29,16 +28,15 @@ const CustomModal = ({ message, onClose }: { message: string, onClose: () => voi
   </div>
 );
 
-export default function BetsPage() {
-  const [selections, setSelections] = useState<{ [key: string]: string }>({});
+export default function AdminAnswerKeyPage() {
+  const [correctAnswers, setCorrectAnswers] = useState<{ [key: string]: string }>({});
   const [bets, setBets] = useState<any[]>([]);
   const [modalMessage, setModalMessage] = useState("");
-  const [userName, setUserName] = useState<string | null>(null); // New state for the user's name
-
   const { currentUser, loading } = useAuth();
   const router = useRouter();
 
-  // Effect hook to handle authentication-based redirection and data fetching
+  // You would implement real admin authentication logic here.
+  // For this example, we'll just check if a user is logged in.
   useEffect(() => {
     if (!loading && !currentUser) {
       router.push('/login');
@@ -47,66 +45,53 @@ export default function BetsPage() {
     if (currentUser) {
       // Set up real-time listener for bets from Firestore
       const q = collection(db, 'bets');
-      const unsubscribeBets = onSnapshot(q, (querySnapshot) => {
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const betsArray: any[] = [];
         querySnapshot.forEach((doc) => {
           betsArray.push({ id: doc.id, ...doc.data() });
         });
         setBets(betsArray);
       });
-
-      // Fetch the user's name from the 'users' collection
-      const fetchUserName = async () => {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setUserName(userDocSnap.data().name);
-        }
-      };
-      
-      fetchUserName();
-
-      return () => unsubscribeBets();
+      return () => unsubscribe();
     }
   }, [currentUser, loading, router]);
 
   const handleSelect = (betId: string, option: string) => {
-    setSelections((prev) => ({ ...prev, [betId]: option }));
+    setCorrectAnswers((prev) => ({ ...prev, [betId]: option }));
   };
 
   const handleTextChange = (betId: string, value: string) => {
-    setSelections((prev) => ({ ...prev, [betId]: value }));
+    setCorrectAnswers((prev) => ({ ...prev, [betId]: value }));
   };
 
-  const handleBetSubmission = async () => {
+  const handleAnswerKeySubmission = async () => {
     if (!currentUser) {
-      setModalMessage("You must be logged in to submit bets.");
+      setModalMessage("You must be logged in as an admin to perform this action.");
       return;
     }
 
-    // Validate that all bets have been answered
-    if (Object.keys(selections).length !== bets.length) {
-      setModalMessage("Please answer all questions before submitting.");
+    // Validate that all bets have an answer
+    if (Object.keys(correctAnswers).length !== bets.length) {
+      setModalMessage("Please provide an answer for all questions before submitting.");
       return;
     }
 
     try {
-      // Create a single document object for all of the user's answers
-      const submissionData = {
-        userName: userName || currentUser.email, // Include the user's name
-        userId: currentUser.uid,
+      // Create a single document object for all of the correct answers
+      const answerKeyData = {
+        submittedBy: currentUser.uid,
         submittedAt: new Date(),
-        answers: selections, // Store the entire selections object
+        answers: correctAnswers, // Store the entire object of correct answers
       };
 
-      // Save the single document to the 'answers' collection
-      await addDoc(collection(db, 'answers'), submissionData);
+      // Save the single document to the 'keys' collection
+      await addDoc(collection(db, 'keys'), answerKeyData);
       
-      setModalMessage("Your bets have been submitted! 🎉");
-      setSelections({}); // Clear selections after submission
+      setModalMessage("The answer key has been submitted successfully! ✅");
+      setCorrectAnswers({}); // Clear selections after submission
     } catch (error) {
-      console.error("Error submitting bets: ", error);
-      setModalMessage("Failed to submit bets. Please try again.");
+      console.error("Error submitting answer key: ", error);
+      setModalMessage("Failed to submit answer key. Please try again.");
     }
   };
 
@@ -125,13 +110,8 @@ export default function BetsPage() {
       <main className="flex-grow py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-extrabold text-rose-500 text-center mb-10">
-            Place Your Bets 💍
+            Create Answer Key
           </h1>
-          {currentUser && (
-            <p className="text-xl md:text-2xl mb-8 max-w-2xl text-gray-700 text-center mx-auto">
-              Welcome, {userName || currentUser.email}!
-            </p>
-          )}
 
           <div className="grid gap-8">
             {bets.length > 0 ? (
@@ -152,12 +132,12 @@ export default function BetsPage() {
                             name={`bet-${bet.id}`}
                             value={option}
                             className="hidden"
-                            checked={selections[bet.id] === option}
+                            checked={correctAnswers[bet.id] === option}
                             onChange={() => handleSelect(bet.id, option)}
                           />
                           <div
                             className={`cursor-pointer px-4 py-2 rounded-full border transition duration-200 ${
-                              selections[bet.id] === option
+                              correctAnswers[bet.id] === option
                                 ? "bg-rose-400 text-white border-rose-400"
                                 : "bg-white text-gray-700 border-gray-300 hover:bg-rose-100"
                             }`}
@@ -172,25 +152,25 @@ export default function BetsPage() {
                     <div>
                       <input
                         type="text"
-                        value={selections[bet.id] || ""}
+                        value={correctAnswers[bet.id] || ""}
                         onChange={(e) => handleTextChange(bet.id, e.target.value)}
                         className="w-full px-4 py-2 rounded-full border border-gray-300 text-gray-700 focus:border-rose-400 focus:ring-rose-400"
-                        placeholder="Type your answer here..."
+                        placeholder="Enter the correct answer here..."
                       />
                     </div>
                   )}
                 </div>
               ))
             ) : (
-              <p className="text-center text-gray-500">No active bets available right now. Check back later!</p>
+              <p className="text-center text-gray-500">No active bets available to create an answer key for.</p>
             )}
           </div>
           {bets.length > 0 && (
             <button
-              onClick={handleBetSubmission}
+              onClick={handleAnswerKeySubmission}
               className="w-full mt-8 bg-purple-300 hover:bg-purple-400 text-white font-semibold py-3 px-8 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
             >
-              Submit Bets
+              Submit Answer Key
             </button>
           )}
         </div>
