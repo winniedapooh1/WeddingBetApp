@@ -7,8 +7,6 @@ export default function Home() {
       {/* Navbar */}
       <Navbar />
 
-      {/* Hero Section */}
-
       {/* Main Content */}
       <main className="flex-grow flex flex-col items-center justify-center text-center px-6 py-16 bg-rose-50 text-gray-800">
         <h1 className="text-5xl md:text-6xl font-extrabold mb-6 text-rose-500 leading-tight">
@@ -32,14 +30,7 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Optional image or flair */}
         <div className="mt-12 opacity-90">
-          {/* <Image
-            src="/wedding-rings.svg"
-            alt="Wedding Rings"
-            width={200}
-            height={200}
-          /> */}
         </div>
       </main>
 
