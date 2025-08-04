@@ -24,11 +24,9 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: WeddingBetApp # Added working directory
 
       - name: Run tests
         run: npm run test
-        working-directory: WeddingBetApp # Added working directory
 
   deploy:
     name: Deploy to Firebase
@@ -46,11 +44,9 @@ jobs:
           node-version: '22' 
       - name: Install dependencies
         run: npm install
-        working-directory: WeddingBetApp # Added working directory
 
       - name: Build project
         run: npm run build # Or your specific build command
-        working-directory: WeddingBetApp # Added working directory
 
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0 # Use the official Firebase Hosting GitHub Action
