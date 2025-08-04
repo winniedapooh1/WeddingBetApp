@@ -1,4 +1,3 @@
-// components/Navbar.tsx
 "use client"; // This is a Client Component
 
 import Link from 'next/link';
@@ -8,7 +7,8 @@ import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
-  const { currentUser, loading } = useAuth();
+  // Now destructuring isAdmin from the useAuth hook
+  const { currentUser, isAdmin, loading } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -43,6 +43,17 @@ export default function Navbar() {
               Bets
             </Link>
           </li>
+          {/* Conditionally render the Admin link */}
+          {!loading && isAdmin && (
+            <li>
+              <Link
+                href="/admin"
+                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
+              >
+                Admin
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               href="/about"
