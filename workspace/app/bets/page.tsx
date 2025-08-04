@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import Navbar from '../components/navBar';
-import { getFirestore, collection, onSnapshot, addDoc } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc } from "firebase/firestore";
 
 // Initialize Firestore. This call will automatically use the default app instance
 // that is initialized in your `../lib/firebase` file.
@@ -33,6 +33,7 @@ export default function BetsPage() {
   const [selections, setSelections] = useState<{ [key: string]: string }>({});
   const [bets, setBets] = useState<any[]>([]);
   const [modalMessage, setModalMessage] = useState("");
+  const [userName, setUserName] = useState<string | null>(null); // New state for the user's name
 
   const { currentUser, loading } = useAuth();
   const router = useRouter();
@@ -44,15 +45,28 @@ export default function BetsPage() {
     }
 
     if (currentUser) {
+      // Set up real-time listener for bets from Firestore
       const q = collection(db, 'bets');
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const unsubscribeBets = onSnapshot(q, (querySnapshot) => {
         const betsArray: any[] = [];
         querySnapshot.forEach((doc) => {
           betsArray.push({ id: doc.id, ...doc.data() });
         });
         setBets(betsArray);
       });
-      return () => unsubscribe();
+
+      // Fetch the user's name from the 'users' collection
+      const fetchUserName = async () => {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setUserName(userDocSnap.data().name);
+        }
+      };
+      
+      fetchUserName();
+
+      return () => unsubscribeBets();
     }
   }, [currentUser, loading, router]);
 
@@ -121,7 +135,7 @@ export default function BetsPage() {
           </h1>
           {currentUser && (
             <p className="text-xl md:text-2xl mb-8 max-w-2xl text-gray-700 text-center mx-auto">
-              Welcome, {currentUser.email}!
+              Welcome, {userName || currentUser.email}!
             </p>
           )}
 
