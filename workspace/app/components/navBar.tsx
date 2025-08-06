@@ -65,6 +65,17 @@ export default function Navbar() {
               </Link>
             </li>
           )}
+          {/* Conditionally render the Admin link */}
+          {!loading && isAdmin && (
+            <li>
+              <Link
+                href="/FindWinner"
+                className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
+              >
+                Find Winner
+              </Link>
+            </li>
+          )}
           <li>
             <Link
               href="/about"
