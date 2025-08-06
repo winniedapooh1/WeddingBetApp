@@ -50,12 +50,10 @@ export default function Navbar() {
                 href="/admin"
                 className="text-gray-700 hover:text-rose-400 text-lg transition duration-300 ease-in-out transform hover:scale-105"
               >
-                Admin
+                Create Bets
               </Link>
             </li>
           )}
-          <li>
-            </li>
           {/* Conditionally render the Admin link */}
           {!loading && isAdmin && (
             <li>
