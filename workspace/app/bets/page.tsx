@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import Navbar from '../components/navBar';
-import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc } from "firebase/firestore";
+import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, query, where } from "firebase/firestore";
 
 // Initialize Firestore. This call will automatically use the default app instance
 // that is initialized in your `../lib/firebase` file.
@@ -33,7 +33,8 @@ export default function BetsPage() {
   const [selections, setSelections] = useState<{ [key: string]: string }>({});
   const [bets, setBets] = useState<any[]>([]);
   const [modalMessage, setModalMessage] = useState("");
-  const [userName, setUserName] = useState<string | null>(null); // New state for the user's name
+  const [userName, setUserName] = useState<string | null>(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false); // New state to track submission status
 
   const { currentUser, loading } = useAuth();
   const router = useRouter();
@@ -46,8 +47,8 @@ export default function BetsPage() {
 
     if (currentUser) {
       // Set up real-time listener for bets from Firestore
-      const q = collection(db, 'bets');
-      const unsubscribeBets = onSnapshot(q, (querySnapshot) => {
+      const qBets = collection(db, 'bets');
+      const unsubscribeBets = onSnapshot(qBets, (querySnapshot) => {
         const betsArray: any[] = [];
         querySnapshot.forEach((doc) => {
           betsArray.push({ id: doc.id, ...doc.data() });
@@ -63,10 +64,23 @@ export default function BetsPage() {
           setUserName(userDocSnap.data().name);
         }
       };
-      
       fetchUserName();
 
-      return () => unsubscribeBets();
+      // Check if the user has already submitted bets
+      const qAnswers = query(collection(db, 'answers'), where('userId', '==', currentUser.uid));
+      const unsubscribeAnswers = onSnapshot(qAnswers, (querySnapshot) => {
+        if (!querySnapshot.empty) {
+          setHasSubmitted(true);
+          setModalMessage("You have already submitted your bets. You can only submit once.");
+        } else {
+          setHasSubmitted(false);
+        }
+      });
+
+      return () => {
+        unsubscribeBets();
+        unsubscribeAnswers();
+      };
     }
   }, [currentUser, loading, router]);
 
@@ -83,6 +97,10 @@ export default function BetsPage() {
       setModalMessage("You must be logged in to submit bets.");
       return;
     }
+    if (hasSubmitted) {
+      setModalMessage("You have already submitted your bets. You can only submit once.");
+      return;
+    }
 
     // Validate that all bets have been answered
     if (Object.keys(selections).length !== bets.length) {
@@ -91,19 +109,18 @@ export default function BetsPage() {
     }
 
     try {
-      // Create a single document object for all of the user's answers
       const submissionData = {
-        userName: userName || currentUser.email, // Include the user's name
+        userName: userName || currentUser.email,
         userId: currentUser.uid,
         submittedAt: new Date(),
-        answers: selections, // Store the entire selections object
+        answers: selections,
       };
 
-      // Save the single document to the 'answers' collection
       await addDoc(collection(db, 'answers'), submissionData);
       
       setModalMessage("Your bets have been submitted! 🎉");
       setSelections({}); // Clear selections after submission
+      setHasSubmitted(true); // Mark as submitted
     } catch (error) {
       console.error("Error submitting bets: ", error);
       setModalMessage("Failed to submit bets. Please try again.");
@@ -154,13 +171,14 @@ export default function BetsPage() {
                             className="hidden"
                             checked={selections[bet.id] === option}
                             onChange={() => handleSelect(bet.id, option)}
+                            disabled={hasSubmitted} // Disable input if already submitted
                           />
                           <div
                             className={`cursor-pointer px-4 py-2 rounded-full border transition duration-200 ${
                               selections[bet.id] === option
                                 ? "bg-rose-400 text-white border-rose-400"
                                 : "bg-white text-gray-700 border-gray-300 hover:bg-rose-100"
-                            }`}
+                            } ${hasSubmitted ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             {option}
                           </div>
@@ -176,6 +194,7 @@ export default function BetsPage() {
                         onChange={(e) => handleTextChange(bet.id, e.target.value)}
                         className="w-full px-4 py-2 rounded-full border border-gray-300 text-gray-700 focus:border-rose-400 focus:ring-rose-400"
                         placeholder="Type your answer here..."
+                        disabled={hasSubmitted} // Disable input if already submitted
                       />
                     </div>
                   )}
@@ -186,12 +205,20 @@ export default function BetsPage() {
             )}
           </div>
           {bets.length > 0 && (
-            <button
-              onClick={handleBetSubmission}
-              className="w-full mt-8 bg-purple-300 hover:bg-purple-400 text-white font-semibold py-3 px-8 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
-            >
-              Submit Bets
-            </button>
+            <>
+              <button
+                onClick={handleBetSubmission}
+                className={`w-full mt-8 bg-purple-300 text-white font-semibold py-3 px-8 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform ${
+                  hasSubmitted ? 'opacity-50 cursor-not-allowed' : 'hover:bg-purple-400 hover:-translate-y-1 hover:scale-105'
+                }`}
+                disabled={hasSubmitted}
+              >
+                {hasSubmitted ? 'Bets Submitted!' : 'Submit Bets'}
+              </button>
+              {hasSubmitted && (
+                <p className="text-center text-red-500 mt-4">You have already submitted your bets.</p>
+              )}
+            </>
           )}
         </div>
       </main>
