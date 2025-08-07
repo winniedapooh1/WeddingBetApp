@@ -4,12 +4,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import Navbar from '../components/navBar';
-import { getFirestore, collection, getDocs, query } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, addDoc, deleteDoc } from "firebase/firestore";
 
 // Initialize Firestore
 const db = getFirestore();
 
-// A simple Modal component
+// Custom Modal Component for general messages
 const CustomModal = ({ message, onClose }: { message: string, onClose: () => void }) => (
   <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
     <div className="relative bg-white rounded-lg shadow-xl p-8 max-w-sm w-full mx-auto text-center">
@@ -27,10 +27,50 @@ const CustomModal = ({ message, onClose }: { message: string, onClose: () => voi
   </div>
 );
 
+// Modal Component to display user's answers
+interface UserAnswersModalProps {
+  userScore: UserScore;
+  allBets: any[]; // All original bets (questions)
+  userSubmittedAnswers: { [betId: string]: string }; // The specific user's answers
+  onClose: () => void;
+}
+
+const UserAnswersModal = ({ userScore, allBets, userSubmittedAnswers, onClose }: UserAnswersModalProps) => {
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+      <div className="relative bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full mx-auto max-h-[90vh] overflow-y-auto">
+        <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
+          Answers for {userScore.userName}
+        </h3>
+        <div className="space-y-4 mb-6">
+          {allBets.map((bet) => (
+            <div key={bet.id} className="p-4 border border-gray-200 rounded-lg">
+              <p className="font-semibold text-gray-800 mb-1">{bet.question}</p>
+              <p className="text-gray-700">
+                Your Answer: <span className="font-medium">{userSubmittedAnswers[bet.id] || "No answer provided"}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-center">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-rose-500 text-white rounded-lg font-semibold hover:bg-rose-600 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface UserScore {
   userId: string;
   userName: string;
   score: number;
+  isSelected: boolean; // New property for checkbox selection
+  userSubmittedAnswers: { [betId: string]: string }; // Store the user's raw answers for modal
 }
 
 export default function FindWinnerPage() {
@@ -42,12 +82,14 @@ export default function FindWinnerPage() {
   const [highestScore, setHighestScore] = useState<number>(0);
   const [loadingResults, setLoadingResults] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [userAnswersModalOpen, setUserAnswersModalOpen] = useState(false);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<UserScore | null>(null);
+  const [allBets, setAllBets] = useState<any[]>([]); // To store all bets for the answers modal
 
   // Effect hook to handle access control
   useEffect(() => {
-    // Redirect if not an admin after loading is complete
     if (!isAdminLoading && !isAdmin) {
-      router.push('/'); // Redirect to home or a permission denied page
+      router.push('/');
     }
   }, [isAdmin, isAdminLoading, router]);
 
@@ -67,7 +109,13 @@ export default function FindWinnerPage() {
     setHighestScore(0);
 
     try {
-      // 1. Fetch the Answer Key
+      // 1. Fetch all Bets (questions)
+      const betsCollectionRef = collection(db, 'bets');
+      const betsSnapshot = await getDocs(query(betsCollectionRef));
+      const fetchedBets = betsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllBets(fetchedBets); // Store all bets for the modal
+
+      // 2. Fetch the Answer Key
       const keysCollectionRef = collection(db, 'keys');
       const keysSnapshot = await getDocs(query(keysCollectionRef));
       
@@ -76,11 +124,10 @@ export default function FindWinnerPage() {
         setLoadingResults(false);
         return;
       }
-      // Assuming only one answer key document for now, or taking the first one
       const answerKeyDoc = keysSnapshot.docs[0];
       const answerKey = answerKeyDoc.data().answers;
 
-      // 2. Fetch all User Answers
+      // 3. Fetch all User Answers
       const answersCollectionRef = collection(db, 'answers');
       const answersSnapshot = await getDocs(query(answersCollectionRef));
 
@@ -90,9 +137,8 @@ export default function FindWinnerPage() {
         return;
       }
 
-      const scores: { [userId: string]: { userName: string; score: number; userId: string } } = {}; // Added userId to the type
+      const scores: { [userId: string]: { userName: string; score: number; userId: string; userSubmittedAnswers: { [betId: string]: string } } } = {};
 
-      // 3. Compare and Score each user's submission
       answersSnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const userId = data.userId;
@@ -110,14 +156,17 @@ export default function FindWinnerPage() {
 
         // Store the highest score for this user if they submitted multiple times
         if (!scores[userId] || currentScore > scores[userId].score) {
-          scores[userId] = { userName, score: currentScore, userId: userId }; // Ensure userId is included here
+          scores[userId] = { userName, score: currentScore, userId: userId, userSubmittedAnswers: userAnswers };
         }
       });
 
-      const calculatedUserScores: UserScore[] = Object.values(scores);
+      const calculatedUserScores: UserScore[] = Object.values(scores).map(score => ({
+        ...score,
+        isSelected: false // Initialize selection state
+      }));
       setUserScores(calculatedUserScores);
 
-      // 4. Identify Winner(s)
+      // 4. Identify Winner(s) (based on highest score)
       let maxScore = 0;
       if (calculatedUserScores.length > 0) {
         maxScore = Math.max(...calculatedUserScores.map(s => s.score));
@@ -142,6 +191,51 @@ export default function FindWinnerPage() {
     }
   };
 
+  const handleCheckboxChange = (userId: string) => {
+    setUserScores(prevScores => 
+      prevScores.map(score => 
+        score.userId === userId ? { ...score, isSelected: !score.isSelected } : score
+      )
+    );
+  };
+
+  const handleViewAnswers = (user: UserScore) => {
+    setSelectedUserForModal(user);
+    setUserAnswersModalOpen(true);
+  };
+
+  const handleDisplayWinnersOnHomepage = async () => {
+    const selectedWinners = userScores.filter(user => user.isSelected);
+
+    if (selectedWinners.length === 0) {
+      setModalMessage("Please select at least one winner to display on the homepage.");
+      return;
+    }
+
+    try {
+      // Clear existing homepage winners (optional, but good for fresh display)
+      const homepageWinnersCollectionRef = collection(db, 'homepageWinners');
+      const existingWinnersSnapshot = await getDocs(query(homepageWinnersCollectionRef));
+      const deletePromises = existingWinnersSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+
+      // Add selected winners to homepageWinners collection
+      for (const winner of selectedWinners) {
+        await addDoc(homepageWinnersCollectionRef, {
+          userName: winner.userName,
+          score: winner.score,
+          userId: winner.userId,
+          displayedAt: new Date(),
+        });
+      }
+      setModalMessage("Selected winner(s) displayed on homepage successfully!");
+    } catch (error) {
+      console.error("Error displaying winners on homepage:", error);
+      setModalMessage("Failed to display winners on homepage. Please try again.");
+    }
+  };
+
+
   if (loading || isAdminLoading) {
     return (
       <div className="font-sans min-h-screen flex flex-col items-center justify-center bg-rose-50 text-gray-700">
@@ -150,7 +244,6 @@ export default function FindWinnerPage() {
     );
   }
 
-  // Redirect if the user is not an admin
   if (!isAdmin) {
     return null; // Will be redirected by useEffect
   }
@@ -200,31 +293,61 @@ export default function FindWinnerPage() {
           {!loadingResults && userScores.length > 0 && (
             <section className="bg-white shadow-md rounded-xl p-6 border border-rose-100">
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">All Participant Scores</h2>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto mb-4">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Select
+                      </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Participant
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Score
                       </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {userScores.sort((a, b) => b.score - a.score).map((user, index) => (
+                    {userScores.sort((a, b) => b.score - a.score).map((user) => (
                       <tr key={user.userId}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={user.isSelected}
+                            onChange={() => handleCheckboxChange(user.userId)}
+                            className="h-4 w-4 text-rose-600 focus:ring-rose-500 border-gray-300 rounded"
+                          />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {user.userName}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {user.score}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => handleViewAnswers(user)}
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            View Answers
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="text-center mt-4">
+                <button
+                  onClick={handleDisplayWinnersOnHomepage}
+                  className="bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2 px-6 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
+                >
+                  Display Selected Winners on Homepage
+                </button>
               </div>
             </section>
           )}
@@ -238,6 +361,15 @@ export default function FindWinnerPage() {
         <CustomModal
           message={modalMessage}
           onClose={() => setModalMessage("")}
+        />
+      )}
+
+      {userAnswersModalOpen && selectedUserForModal && (
+        <UserAnswersModal
+          userScore={selectedUserForModal}
+          allBets={allBets}
+          userSubmittedAnswers={selectedUserForModal.userSubmittedAnswers}
+          onClose={() => setUserAnswersModalOpen(false)}
         />
       )}
     </div>
