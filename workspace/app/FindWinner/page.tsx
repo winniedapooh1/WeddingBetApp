@@ -235,6 +235,27 @@ export default function FindWinnerPage() {
     }
   };
 
+  const handleResetHomepageDisplay = async () => {
+    setLoadingResults(true); // Show loading while resetting
+    try {
+      const homepageWinnersCollectionRef = collection(db, 'homepageWinners');
+      const existingWinnersSnapshot = await getDocs(query(homepageWinnersCollectionRef));
+      
+      if (existingWinnersSnapshot.empty) {
+        setModalMessage("Homepage display is already empty.");
+      } else {
+        const deletePromises = existingWinnersSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+        setModalMessage("Homepage winner display has been reset!");
+      }
+    } catch (error) {
+      console.error("Error resetting homepage display:", error);
+      setModalMessage("Failed to reset homepage display. Please try again.");
+    } finally {
+      setLoadingResults(false);
+    }
+  };
+
 
   if (loading || isAdminLoading) {
     return (
@@ -258,13 +279,20 @@ export default function FindWinnerPage() {
             Find Wedding Bet Winner
           </h1>
 
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 flex justify-center space-x-4"> {/* Added flex and space-x */}
             <button
               onClick={findWinner}
               className="bg-purple-300 hover:bg-purple-400 text-white font-semibold py-3 px-8 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
               disabled={loadingResults}
             >
               {loadingResults ? 'Calculating...' : 'Find Winner'}
+            </button>
+            <button
+              onClick={handleResetHomepageDisplay}
+              className="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-8 rounded-full text-lg shadow-md transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
+              disabled={loadingResults}
+            >
+              Reset Homepage Display
             </button>
           </div>
 
