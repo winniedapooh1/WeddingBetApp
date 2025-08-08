@@ -1,7 +1,47 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from '../app/components/navBar';
+import { getFirestore, collection, onSnapshot, query } from "firebase/firestore";
+
+// Initialize Firestore
+const db = getFirestore();
+
+interface DisplayedWinner {
+  userId: string;
+  userName: string;
+  score: number;
+}
 
 export default function Home() {
+  const [displayedWinners, setDisplayedWinners] = useState<DisplayedWinner[]>([]);
+  const [loadingWinners, setLoadingWinners] = useState(true);
+
+  useEffect(() => {
+    const homepageWinnersCollectionRef = collection(db, 'homepageWinners');
+    const q = query(homepageWinnersCollectionRef);
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const winnersArray: DisplayedWinner[] = [];
+      querySnapshot.forEach((doc) => {
+        winnersArray.push({
+          userId: doc.data().userId,
+          userName: doc.data().userName,
+          score: doc.data().score,
+        });
+      });
+      setDisplayedWinners(winnersArray);
+      setLoadingWinners(false);
+    }, (error) => {
+      console.error("Error fetching homepage winners:", error);
+      setLoadingWinners(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
   return (
     <div className="font-sans min-h-screen flex flex-col bg-rose-50">
       {/* Navbar */}
@@ -30,7 +70,22 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="mt-12 opacity-90">
+        {/* Winner Display Section */}
+        <div className="mt-12 opacity-90 bg-white shadow-md rounded-xl p-6 border border-rose-100 w-full max-w-md">
+          <h2 className="text-3xl font-bold text-rose-500 mb-4">Official Winners</h2>
+          {loadingWinners ? (
+            <p className="text-gray-600">Loading winners...</p>
+          ) : displayedWinners.length > 0 ? (
+            <ul className="list-none p-0">
+              {displayedWinners.map((winner) => (
+                <li key={winner.userId} className="text-xl text-gray-700 mb-2">
+                  <span className="font-semibold">{winner.userName}</span> - {winner.score} Correct!
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xl text-gray-700">Winner to be determined. Stay tuned!</p>
+          )}
         </div>
       </main>
 
