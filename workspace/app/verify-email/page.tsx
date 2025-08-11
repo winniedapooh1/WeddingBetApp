@@ -3,24 +3,43 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext'; // Assuming you have AuthContext
-import { sendEmailVerification } from 'firebase/auth';
+import { sendEmailVerification, getAuth, User } from 'firebase/auth'; // Import getAuth and User type
+import { auth } from '../lib/firebase'; // Import the auth instance
 
 export default function VerifyEmailPage() {
-  const { currentUser } = useAuth(); // Get the current user from AuthContext
+  const { currentUser: contextUser } = useAuth(); // Get user from context
+  const [userInstance, setUserInstance] = useState<User | null>(null); // State to hold the current Firebase User instance
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [cooldown, setCooldown] = useState(0); // Cooldown in seconds
 
   useEffect(() => {
+    // Attempt to get the current user directly from Firebase Auth
+    const authInstance = getAuth();
+    const unsubscribe = authInstance.onAuthStateChanged((user) => {
+      if (user) {
+        setUserInstance(user);
+      } else {
+        // If no user is found, clear the user instance
+        setUserInstance(null);
+      }
+    });
+
+    // Cleanup timer
     let timer: NodeJS.Timeout;
     if (cooldown > 0) {
       timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
     }
-    return () => clearTimeout(timer);
+
+    return () => {
+      unsubscribe(); // Unsubscribe from auth state changes
+      clearTimeout(timer); // Clear the cooldown timer
+    };
   }, [cooldown]);
 
   const handleResendVerification = async () => {
-    if (!currentUser) {
+    // Use the userInstance obtained from onAuthStateChanged
+    if (!userInstance) {
       setError("No user is logged in or signed up. Please sign up first.");
       return;
     }
@@ -30,13 +49,20 @@ export default function VerifyEmailPage() {
     }
 
     try {
-      await sendEmailVerification(currentUser);
+      await sendEmailVerification(userInstance); // Use the fetched user instance
       setMessage("Verification email sent! Check your inbox.");
       setError("");
       setCooldown(60); // Set cooldown for 60 seconds
     } catch (err: any) {
       console.error("Error resending verification email:", err);
-      setError("Failed to resend verification email. Please try again later.");
+      // Specific error handling for common verification issues
+      if (err.code === 'auth/too-many-requests') {
+        setError("Too many requests to send verification email. Please try again later.");
+      } else if (err.code === 'auth/user-disabled') {
+        setError("Your account has been disabled. Please contact support.");
+      } else {
+        setError(`Failed to resend verification email: ${err.message}.`);
+      }
       setMessage("");
     }
   };
@@ -58,9 +84,9 @@ export default function VerifyEmailPage() {
         <div className="flex flex-col gap-4">
           <button
             onClick={handleResendVerification}
-            disabled={cooldown > 0 || !currentUser}
+            disabled={cooldown > 0 || !userInstance} // Disable if no userInstance
             className={`bg-rose-500 text-white font-semibold py-2 px-5 rounded-full text-lg shadow-md transition duration-300 ${
-              cooldown > 0 || !currentUser ? 'opacity-50 cursor-not-allowed' : 'hover:bg-rose-600'
+              cooldown > 0 || !userInstance ? 'opacity-50 cursor-not-allowed' : 'hover:bg-rose-600'
             }`}
           >
             {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend Verification Email'}
