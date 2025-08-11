@@ -3,9 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+} from 'firebase/auth'; // Removed sendEmailVerification import
 import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase'; // Ensure db is imported here if used for user profiles
 
 // Password rules definition
 const passwordRules = [
@@ -19,13 +22,13 @@ const passwordRules = [
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState(''); // New state for confirm password
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // State for password visibility
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // State for confirm password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordRulesMet, setPasswordRulesMet] = useState<boolean[]>(
     new Array(passwordRules.length).fill(false)
   );
@@ -52,14 +55,8 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        if (!user.emailVerified) {
-          setError('Please verify your email address before logging in. Check your inbox for a verification link.');
-          setLoading(false);
-          // Optionally, you can resend verification email here
-          // await sendEmailVerification(user);
-          // console.log('Verification email resent.');
-          return;
-        }
+        // Removed: if (!user.emailVerified) { ... }
+        
         console.log('User logged in!');
         router.push('/');
       } else {
@@ -78,8 +75,7 @@ export default function LoginPage() {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
-        // Send email verification
-        await sendEmailVerification(user);
+        // Removed: await sendEmailVerification(user);
 
         // Store user information in Firestore
         await setDoc(doc(db, 'users', user.uid), {
@@ -89,8 +85,7 @@ export default function LoginPage() {
         });
         console.log('User signed up and info stored in Firestore!', user);
         
-        // Redirect to a page informing the user to verify their email
-        router.push('/verify-email'); 
+        router.push('/'); // Redirect directly to home after sign up
       }
     } catch (err: any) {
       console.error('Authentication error:', err.message);
@@ -221,7 +216,7 @@ export default function LoginPage() {
                 {showConfirmPassword ? (
                   <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.879 16.121A4.995 4.995 0 0112 15c1.464 0 2.842.556 3.879 1.579m-4.243 4.243L19.5 19.5m-1.414-1.414L10.879 7.879m-4.243 4.243L1.5 4.5" />
-                  </svg>
+                </svg>
                 ) : (
                   <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
